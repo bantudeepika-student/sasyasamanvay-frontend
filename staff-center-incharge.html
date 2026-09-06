@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Center In-Charge Dashboard — SasyaSamanvay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dark-green:#3F5640;
+  --primary-green:#5F765F;
+  --sage-green:#7E957E;
+  --pastel-bg:#EDF2EB;
+  --light-bg:#FAFCF9;
+  --border-color:#DDE5D8;
+  --card-white:#FFFFFF;
+  --text-dark:#2F4730;
+  --text-secondary:#6B7280;
+  --radius-sm:6px;
+  --radius-md:10px;
+  --red:#B3432B;
+  --red-bg:#FBEAE6;
+  --amber:#9C7A1E;
+  --amber-bg:#FBF3DD;
+  --blue:#2E5C8A;
+  --blue-bg:#E8F0F8;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;font-family:'Work Sans', sans-serif;color:var(--text-dark);
+  background:var(--pastel-bg);line-height:1.5;
+}
+h1,h2,h3,.serif{font-family:'Lora', serif;color:var(--dark-green);margin:0;font-weight:600;}
+a{text-decoration:none;color:inherit;}
+img{max-width:100%;display:block;}
+
+/* ---------- topbar (app pages) ---------- */
+.topbar{
+  background:var(--card-white);border-bottom:1px solid var(--border-color);
+  padding:14px 24px;display:flex;align-items:center;justify-content:space-between;
+}
+.topbar .brand{display:flex;align-items:center;gap:10px;}
+.topbar .brand-mark{
+  width:34px;height:34px;border-radius:50%;background:var(--dark-green);
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.topbar .brand-name{font-family:'Lora',serif;font-weight:700;font-size:18px;color:var(--dark-green);}
+.topbar a.back{font-size:13.5px;color:var(--text-secondary);font-weight:500;}
+.topbar a.back:hover{color:var(--dark-green);}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 20px;border-radius:var(--radius-sm);font-size:14.5px;font-weight:600;
+  cursor:pointer;border:1px solid transparent;white-space:nowrap;
+  transition:background .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease;
+  font-family:inherit;
+}
+.btn-primary{background:var(--dark-green);color:#fff;}
+.btn-primary:hover{background:#324a35;}
+.btn-outline{background:transparent;border-color:var(--dark-green);color:var(--dark-green);}
+.btn-outline:hover{background:var(--pastel-bg);}
+.btn-block{width:100%;}
+.btn-sm{padding:7px 14px;font-size:13px;}
+.btn-danger{background:var(--red-bg);color:var(--red);}
+.btn-danger:hover{opacity:.85;}
+.btn-success{background:var(--dark-green);color:#fff;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* ---------- auth cards / forms ---------- */
+.auth-wrap{
+  min-height:calc(100vh - 63px);display:flex;align-items:center;justify-content:center;
+  padding:40px 20px;background:linear-gradient(180deg, var(--pastel-bg) 0%, var(--light-bg) 100%);
+}
+.auth-card{
+  background:var(--card-white);border:1px solid var(--border-color);border-radius:var(--radius-md);
+  padding:38px 36px;width:100%;max-width:440px;box-shadow:0 10px 30px rgba(63,86,64,.06);
+}
+.auth-card.wide{max-width:640px;}
+.auth-icon{
+  width:48px;height:48px;border-radius:12px;background:var(--pastel-bg);
+  display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;
+}
+.auth-card h1{font-size:22px;margin-bottom:6px;}
+.auth-card .sub{font-size:14px;color:var(--text-secondary);margin-bottom:26px;}
+
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text-dark);margin-bottom:6px;}
+.field .hint{font-size:12px;color:var(--text-secondary);margin-top:4px;}
+input[type=text],input[type=tel],input[type=number],input[type=password],input[type=file],select,textarea{
+  width:100%;padding:11px 13px;border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  font-family:inherit;font-size:14.5px;color:var(--text-dark);background:var(--light-bg);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--sage-green);outline-offset:1px;border-color:var(--primary-green);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.otp-row{display:flex;gap:10px;}
+.otp-row input{flex:1;}
+
+.divider-text{
+  display:flex;align-items:center;gap:10px;color:var(--text-secondary);font-size:12.5px;margin:18px 0;
+}
+.divider-text::before,.divider-text::after{content:"";flex:1;height:1px;background:var(--border-color);}
+
+/* ---------- stepper (registration) ---------- */
+.stepper{display:flex;align-items:center;margin-bottom:30px;gap:0;}
+.stepper .step{display:flex;align-items:center;gap:10px;flex:1;}
+.stepper .circle{
+  width:30px;height:30px;border-radius:50%;background:var(--border-color);color:var(--text-secondary);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
+  transition:background .2s, color .2s;
+}
+.stepper .step.active .circle{background:var(--dark-green);color:#fff;}
+.stepper .step.done .circle{background:var(--primary-green);color:#fff;}
+.stepper .label{font-size:12.5px;font-weight:600;color:var(--text-secondary);}
+.stepper .step.active .label{color:var(--dark-green);}
+.stepper .line{flex:1;height:2px;background:var(--border-color);margin:0 4px;}
+.form-panel{display:none;}
+.form-panel.active{display:block;}
+.form-actions{display:flex;justify-content:space-between;margin-top:26px;gap:12px;}
+
+/* ---------- role select ---------- */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;}
+.role-option{
+  border:1.5px solid var(--border-color);border-radius:var(--radius-md);padding:16px 14px;
+  cursor:pointer;text-align:left;background:var(--light-bg);transition:border-color .15s, background .15s;
+}
+.role-option .r-icon{font-size:20px;margin-bottom:8px;}
+.role-option .r-name{font-size:13.5px;font-weight:700;color:var(--dark-green);}
+.role-option.selected{border-color:var(--dark-green);background:var(--pastel-bg);}
+
+/* ---------- dashboard shell ---------- */
+.dash-shell{display:flex;min-height:calc(100vh - 63px);}
+.sidebar{
+  width:230px;background:var(--card-white);border-right:1px solid var(--border-color);
+  padding:22px 14px;flex-shrink:0;
+}
+.sidebar .role-tag{
+  font-size:11px;font-weight:700;color:var(--primary-green);text-transform:uppercase;letter-spacing:.04em;
+  padding:0 10px 14px;
+}
+.sidebar a.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);
+  font-size:14px;font-weight:500;color:var(--text-dark);margin-bottom:4px;
+}
+.sidebar a.nav-item:hover{background:var(--pastel-bg);}
+.sidebar a.nav-item.active{background:var(--dark-green);color:#fff;}
+.dash-main{flex:1;padding:28px 32px;max-width:1200px;}
+.dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.dash-header h1{font-size:22px;}
+.dash-header .sub{font-size:13.5px;color:var(--text-secondary);margin-top:4px;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.kpi-card{
+  background:var(--card-white);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:18px 20px;
+}
+.kpi-card .kpi-label{font-size:12.5px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;}
+.kpi-card .kpi-value{font-family:'Lora',serif;font-weight:700;font-size:28px;color:var(--dark-green);}
+.kpi-card .kpi-value.red{color:var(--red);}
+.kpi-card .kpi-value.amber{color:var(--amber);}
+
+.panel{background:var(--card-white);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:22px 24px;margin-bottom:22px;}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.panel-head h3{font-size:15.5px;}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{text-align:left;padding:10px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border-color);font-size:12.5px;text-transform:uppercase;letter-spacing:.02em;}
+td{padding:12px;border-bottom:1px solid var(--border-color);}
+tr:last-child td{border-bottom:none;}
+tr.row-link{cursor:pointer;}
+tr.row-link:hover{background:var(--pastel-bg);}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;}
+.badge-waiting{background:var(--amber-bg);color:var(--amber);}
+.badge-progress{background:var(--blue-bg);color:var(--blue);}
+.badge-done{background:var(--pastel-bg);color:var(--dark-green);}
+.badge-failed{background:var(--red-bg);color:var(--red);}
+
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border-color);margin-bottom:20px;}
+.tab{padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;}
+.tab.active{color:var(--dark-green);border-color:var(--dark-green);}
+
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 28px;font-size:14px;}
+.profile-grid .p-label{font-size:12px;color:var(--text-secondary);margin-bottom:3px;}
+.profile-grid .p-value{font-weight:600;color:var(--text-dark);}
+
+.timeline{list-style:none;padding:0;margin:0;}
+.timeline li{
+  display:flex;gap:14px;padding-bottom:20px;position:relative;
+}
+.timeline li::before{
+  content:"";position:absolute;left:9px;top:22px;bottom:0;width:1.5px;background:var(--border-color);
+}
+.timeline li:last-child::before{display:none;}
+.timeline .dot{width:20px;height:20px;border-radius:50%;background:var(--border-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;}
+.timeline li.done .dot{background:var(--primary-green);}
+.timeline li.current .dot{background:var(--dark-green);}
+.timeline .t-title{font-size:14px;font-weight:600;}
+.timeline .t-sub{font-size:12.5px;color:var(--text-secondary);}
+
+@media (max-width:900px){
+  .dash-shell{flex-direction:column;}
+  .sidebar{width:100%;display:flex;overflow-x:auto;gap:6px;padding:12px;border-right:none;border-bottom:1px solid var(--border-color);}
+  .sidebar .role-tag{display:none;}
+  .sidebar a.nav-item{white-space:nowrap;margin-bottom:0;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .field-row{grid-template-columns:1fr;}
+  .role-grid{grid-template-columns:1fr;}
+  .profile-grid{grid-template-columns:1fr;}
+  table{font-size:12.5px;}
+}
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="brand">
+    <div class="brand-mark">🌾</div>
+    <div class="brand-name">SasyaSamanvay</div>
+  </a>
+  <a href="staff-login.html" class="back">Switch account →</a>
+</div>
+
+<div class="dash-shell">
+  <div class="sidebar">
+    <div class="role-tag">Center In-Charge</div>
+    <a class="nav-item active" onclick="showTab('overview')">📊 Overview</a>
+    <a class="nav-item" onclick="showTab('farmers')">🌾 Farmer Profiles</a>
+    <a class="nav-item" onclick="showTab('reports')">📄 Reports</a>
+    <a class="nav-item" onclick="showTab('register')">➕ Register Farmer</a>
+    <a class="nav-item" href="staff-login.html" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
+  </div>
+
+  <div class="dash-main">
+
+    <div id="tab-overview">
+      <div class="dash-header">
+        <div>
+          <h1>Center overview</h1>
+          <div class="sub">Guntur District Procurement Center · Today, 6 Sep 2026</div>
+        </div>
+        <button class="btn btn-primary" onclick="showTab('register')">➕ Register a Farmer</button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Farmers scheduled today</div><div class="kpi-value">64</div></div>
+        <div class="kpi-card"><div class="kpi-label">Arrived</div><div class="kpi-value">41</div></div>
+        <div class="kpi-card"><div class="kpi-label">Waiting</div><div class="kpi-value amber">9</div></div>
+        <div class="kpi-card"><div class="kpi-label">Weighing completed</div><div class="kpi-value">28</div></div>
+        <div class="kpi-card"><div class="kpi-label">Procurement completed</div><div class="kpi-value">22</div></div>
+        <div class="kpi-card"><div class="kpi-label">Not arrived</div><div class="kpi-value red">4</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total quantity procured</div><div class="kpi-value">1,842 qtl</div></div>
+        <div class="kpi-card"><div class="kpi-label">Capacity remaining</div><div class="kpi-value">158 qtl</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Quantity procured, by crop</h3></div>
+        <table>
+          <tr><th>Crop</th><th>Expected</th><th>Procured so far</th><th>Remaining capacity</th></tr>
+          <tr><td>Paddy</td><td>1,200 qtl</td><td>980 qtl</td><td>220 qtl</td></tr>
+          <tr><td>Wheat</td><td>500 qtl</td><td>420 qtl</td><td>80 qtl</td></tr>
+          <tr><td>Maize</td><td>300 qtl</td><td>280 qtl</td><td>20 qtl</td></tr>
+          <tr><td>Cotton</td><td>150 qtl</td><td>162 qtl</td><td>—</td></tr>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Today's queue</h3></div>
+        <table>
+          <tr><th>Token</th><th>Farmer</th><th>Crop</th><th>Quantity</th><th>Status</th></tr>
+          <tr><td>#41</td><td>K. Ramaiah</td><td>Paddy</td><td>28 qtl</td><td><span class="badge badge-waiting">Waiting</span></td></tr>
+          <tr><td>#40</td><td>S. Lakshmi</td><td>Wheat</td><td>15 qtl</td><td><span class="badge badge-progress">Weighing</span></td></tr>
+          <tr><td>#39</td><td>M. Venkatesh</td><td>Paddy</td><td>32 qtl</td><td><span class="badge badge-done">Completed</span></td></tr>
+          <tr><td>#38</td><td>P. Anitha</td><td>Cotton</td><td>10 qtl</td><td><span class="badge badge-failed">Not Arrived</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-farmers" style="display:none;">
+      <div class="dash-header"><div><h1>Farmer profiles</h1><div class="sub">All farmers registered or scheduled at this center</div></div></div>
+      <div class="panel">
+        <table>
+          <tr><th>Token</th><th>Name</th><th>Mobile</th><th>Crop</th><th>Quantity</th><th>Documents</th></tr>
+          <tr><td>#41</td><td>K. Ramaiah</td><td>98xxxxxx12</td><td>Paddy</td><td>28 qtl</td><td><span class="badge badge-done">Verified</span></td></tr>
+          <tr><td>#40</td><td>S. Lakshmi</td><td>98xxxxxx45</td><td>Wheat</td><td>15 qtl</td><td><span class="badge badge-done">Verified</span></td></tr>
+          <tr><td>#37</td><td>D. Prasad</td><td>98xxxxxx09</td><td>Maize</td><td>22 qtl</td><td><span class="badge badge-waiting">Pending review</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-reports" style="display:none;">
+      <div class="dash-header"><div><h1>Reports</h1><div class="sub">Download or view procurement records</div></div></div>
+      <div class="panel">
+        <table>
+          <tr><th>Report</th><th>Coverage</th><th></th></tr>
+          <tr><td>Daily procurement report</td><td>6 Sep 2026</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+          <tr><td>Crop-wise procurement report</td><td>Sep 2026 (month to date)</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+          <tr><td>Pending farmers report</td><td>Live</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-register" style="display:none;">
+      <div class="dash-header"><div><h1>Register a farmer</h1><div class="sub">Assisted registration for a farmer without a smartphone</div></div></div>
+      <div class="panel">
+        <div class="field-row">
+          <div class="field"><label>Full name</label><input type="text" placeholder="Farmer's name"></div>
+          <div class="field"><label>Mobile number</label><input type="tel" placeholder="10-digit mobile number"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Aadhaar number</label><input type="text" placeholder="12-digit Aadhaar number"></div>
+          <div class="field"><label>Crop</label>
+            <select><option>Paddy</option><option>Wheat</option><option>Maize</option><option>Cotton</option></select>
+          </div>
+        </div>
+        <div class="field"><label>Expected quantity (quintals)</label><input type="number" placeholder="e.g. 25"></div>
+        <button class="btn btn-primary" onclick="alert('Farmer profile created and added to the queue.')">Create Farmer Profile</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showTab(name){
+  ['overview','farmers','reports','register'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = (t===name) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.sidebar .nav-item').forEach(el=>el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>
