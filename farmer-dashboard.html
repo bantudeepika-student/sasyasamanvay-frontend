@@ -14,17 +14,55 @@
 <body>
 <header class="topbar"><a href="index.html" class="brand"><span class="brand-mark">🌾</span><span class="brand-name">SasyaSamanvay</span></a><a href="index.html" class="back" id="logout">↩ Logout</a></header>
 <div class="layout"><aside class="sidebar"><div class="role-tag">Farmer Portal</div><a class="nav-item active" href="#overview">📊 Overview</a><a class="nav-item" href="#profile">👤 My Profile</a><a class="nav-item" href="#slots">📅 Procurement Slots</a><a class="nav-item" href="#help">❓ Help &amp; Support</a></aside>
-<main class="main"><div class="header"><div><h1>Welcome back, <span id="farmerName">Farmer</span></h1><div class="sub">Here is the latest update on your procurement journey.</div></div><a class="btn btn-primary" href="#slots">📅 Book a procurement slot</a></div>
+<main class="main"><div class="header"><div><h1>Hi <span id="farmerName">Farmer</span></h1><div class="sub">Here is the latest update on your procurement journey.</div></div><a class="btn btn-primary" href="#slots">📅 Book a procurement slot</a></div>
 <section class="kpis"><div class="kpi"><div class="kpi-label">Current application</div><div class="kpi-value">In review</div></div><div class="kpi"><div class="kpi-label">Registered land</div><div class="kpi-value">4.2 acres</div></div><div class="kpi"><div class="kpi-label">Last payment</div><div class="kpi-value">₹68,940</div></div></section>
 <div class="grid"><section class="panel" id="overview"><h2>Procurement status</h2><div class="status"><div class="status-icon">✓</div><div><strong>Registration completed</strong><span>Your documents were received on 12 Aug 2025.</span></div></div><div class="status"><div class="status-icon">✓</div><div><strong>Land and crop documents verified</strong><span>Verification completed by the center in-charge.</span></div></div><div class="status"><div class="status-icon">⏳</div><div><strong>Awaiting quality inspection</strong><span>Bring your crop to the center after booking a slot.</span></div></div><div class="notice">Keep your Aadhaar-linked mobile number active for procurement updates.</div></section>
-<section class="panel" id="slots"><h2>Available slots</h2><div class="slot"><div><strong>Monday, 18 August</strong><span>08:00 AM - 11:00 AM · Kurnool Center</span></div><button class="btn btn-outline" onclick="bookSlot(this)">Book</button></div><div class="slot"><div><strong>Tuesday, 19 August</strong><span>08:00 AM - 11:00 AM · Kurnool Center</span></div><button class="btn btn-outline" onclick="bookSlot(this)">Book</button></div><div class="slot"><div><strong>Wednesday, 20 August</strong><span>02:00 PM - 05:00 PM · Kurnool Center</span></div><button class="btn btn-outline" onclick="bookSlot(this)">Book</button></div></section></div>
+<section class="panel" id="slots"><h2>Book a procurement slot</h2><div class="profile"><div><div class="label">Farmer name</div><input id="bookingName" type="text" readonly></div><div><div class="label">Mobile number</div><input id="bookingMobile" type="tel" readonly></div><div><div class="label">Crop type</div><select id="bookingCrop"><option>Paddy</option><option>Wheat</option><option>Maize</option><option>Cotton</option></select></div><div><div class="label">Quantity (quintals)</div><input id="bookingQuantity" type="number" min="0.1" step="0.1" placeholder="Enter quantity" oninput="showCapacity()"></div><div><div class="label">Procurement center</div><select id="bookingCenter" onchange="filterBookingSlots()"><option>Loading centers...</option></select></div><div><div class="label">Time slot</div><select id="bookingSlot"><option>Loading slots...</option></select></div></div><div id="capacityMessage" class="sub" style="margin:16px 0;"></div><button class="btn btn-primary" id="bookSlotButton" onclick="submitBooking()">Book Slot</button></section></div>
 <section class="panel" id="profile"><h2>My profile</h2><div class="profile"><div><div class="label">Mobile number</div><div class="value" id="mobileValue">Not provided</div></div><div><div class="label">Farmer ID</div><div class="value">F-1048</div></div><div><div class="label">Village</div><div class="value">Nandikotkur</div></div><div><div class="label">Primary crop</div><div class="value">Paddy</div></div></div></section>
+<section class="panel" id="timeline"><h2>Procurement Status Tracking</h2><div id="timelineList" class="status"><span>Loading procurement timeline...</span></div></section>
+<section class="panel" id="notifications"><h2>Notifications</h2><div id="notificationList" class="status"><span>Loading notifications...</span></div></section>
 <section class="panel" id="help"><h2>Need help?</h2><div class="sub">Contact your procurement center at 08518 245 700, Monday to Saturday from 9:00 AM to 5:00 PM.</div></section>
 </main></div>
 <script>
 const session=JSON.parse(localStorage.getItem('sasyaSession')||'null');
-if(session&&session.mobile) document.getElementById('mobileValue').textContent='+91 '+session.mobile;
-function bookSlot(button){document.querySelectorAll('#slots button').forEach(item=>{item.textContent='Book';item.classList.remove('btn-primary');item.classList.add('btn-outline')});button.textContent='Booked';button.classList.remove('btn-outline');button.classList.add('btn-primary');alert('Your procurement slot has been booked.');}
+const farmer=session&&session.farmer;
+const headers={Authorization:'Bearer '+(session&&session.token)};
+function updateActiveSection(){const section=window.location.hash||'#overview';document.querySelectorAll('.sidebar .nav-item').forEach(item=>item.classList.toggle('active',item.getAttribute('href')===section));}
+window.addEventListener('hashchange',updateActiveSection);updateActiveSection();
+if(!session||session.type!=='farmer'||!farmer){ window.location.href='farmer-login.html'; }
+else{ loadDashboard(); }
+async function loadDashboard(){
+	try{
+		const response=await fetch('/api/farmers/'+encodeURIComponent(farmer.id)+'/dashboard',{headers});
+		const result=await response.json();
+		if(!response.ok) throw new Error(result.error);
+		document.getElementById('farmerName').textContent=result.farmer.name;
+		document.getElementById('mobileValue').textContent='+91 '+result.farmer.mobile;
+		document.getElementById('bookingName').value=result.farmer.name;
+		document.getElementById('bookingMobile').value=result.farmer.mobile;
+		renderTimeline(result.timeline);
+		renderNotifications(result.notifications);
+		loadBookingOptions();
+	}catch(error){ alert(error.message||'Unable to load dashboard data.'); }
+}
+function renderTimeline(items){
+	document.getElementById('timelineList').innerHTML=items.map(item=>'<div class="status"><div class="status-icon">'+(item.completed?'✓':'○')+'</div><div><strong>'+item.label+(item.current?' · CURRENT':'')+'</strong><span>'+(item.completed&&item.at?new Date(item.at).toLocaleString():'Upcoming')+'</span></div></div>').join('');
+}
+function renderNotifications(items){
+	const list=document.getElementById('notificationList');
+	if(!items.length){list.innerHTML='<span>No notifications yet.</span>';return;}
+	list.innerHTML=items.map(item=>'<div class="status"><div><strong>'+item.message+'</strong><span>'+new Date(item.createdAt).toLocaleString()+(item.read?'':' · Unread')+'</span></div>'+(!item.read?'<button class="btn btn-outline" onclick="markNotificationRead(\''+item.id+'\')">Mark read</button>':'')+'</div>').join('');
+}
+async function markNotificationRead(id){
+	const response=await fetch('/api/notifications/'+id+'/read',{method:'PATCH',headers:{...headers,'Content-Type':'application/json'}});
+	if(!response.ok){const result=await response.json();alert(result.error||'Unable to update notification.');return;}
+	loadDashboard();
+}
+let bookingOptions={centers:[],slots:[]};
+async function loadBookingOptions(){try{const response=await fetch('/api/booking-options',{headers});const result=await response.json();if(!response.ok)throw new Error(result.error);bookingOptions=result;const centerSelect=document.getElementById('bookingCenter');centerSelect.innerHTML=result.centers.map(center=>'<option value="'+center.name+'">'+center.name+' ('+Math.max(0,center.capacity-center.bookedQuantity)+' qtl available)</option>').join('');filterBookingSlots();}catch(error){document.getElementById('capacityMessage').textContent=error.message;}}
+function filterBookingSlots(){const center=document.getElementById('bookingCenter').value;const slotSelect=document.getElementById('bookingSlot');const slots=bookingOptions.slots.filter(slot=>slot.center===center&&slot.availableQuantity>0);slotSelect.innerHTML=slots.length?slots.map(slot=>'<option value="'+slot.id+'">'+slot.date+' · '+slot.time+' ('+slot.availableQuantity+' qtl available)</option>').join(''):'<option value="">No available time slots</option>';showCapacity();}
+function showCapacity(){const slot=bookingOptions.slots.find(item=>item.id===document.getElementById('bookingSlot').value);document.getElementById('capacityMessage').textContent=slot?'Available quantity for this slot: '+slot.availableQuantity+' quintals':'';}
+async function submitBooking(){const slotId=document.getElementById('bookingSlot').value;const quantity=Number(document.getElementById('bookingQuantity').value);const slot=bookingOptions.slots.find(item=>item.id===slotId);if(!slotId||!slot)return alert('Select an available procurement time slot.');if(!Number.isFinite(quantity)||quantity<=0)return alert('Enter a valid positive quantity.');if(quantity>slot.availableQuantity)return alert('Only '+slot.availableQuantity+' quintals are currently available at this procurement center.');const button=document.getElementById('bookSlotButton');button.disabled=true;button.textContent='Booking...';try{const response=await fetch('/api/slots/'+slotId+'/book',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({quantity,crop:document.getElementById('bookingCrop').value})});const result=await response.json();if(!response.ok)throw new Error(result.error);alert('Your procurement slot has been booked.');loadDashboard();}catch(error){alert(error.message||'Unable to book this slot.');}finally{button.disabled=false;button.textContent='Book Slot';}}
 document.getElementById('logout').addEventListener('click',()=>localStorage.removeItem('sasyaSession'));
 </script>
 </body>

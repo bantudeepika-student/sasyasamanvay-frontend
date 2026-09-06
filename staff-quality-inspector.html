@@ -227,7 +227,7 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="role-tag">Quality Inspector</div>
     <a class="nav-item active" onclick="showTab('inspect')">🔍 Inspection Queue</a>
     <a class="nav-item" onclick="showTab('farmers')">🌾 Farmer Profiles</a>
-    <a class="nav-item" href="staff-login.html" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
+    <a class="nav-item" href="index.html" id="staffLogout" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
   </div>
 
   <div class="dash-main">
@@ -245,11 +245,9 @@ tr.row-link:hover{background:var(--pastel-bg);}
 
       <div class="panel">
         <div class="panel-head"><h3>Pending inspection queue</h3></div>
-        <table>
+        <table id="qualityQueue">
           <tr><th>Token</th><th>Farmer</th><th>Crop</th><th>Quantity</th><th></th></tr>
-          <tr><td>#41</td><td>K. Ramaiah</td><td>Paddy</td><td>28 qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer('K. Ramaiah','#41','Paddy','28 qtl')">Inspect</button></td></tr>
-          <tr><td>#42</td><td>V. Suresh</td><td>Wheat</td><td>19 qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer('V. Suresh','#42','Wheat','19 qtl')">Inspect</button></td></tr>
-          <tr><td>#43</td><td>N. Padma</td><td>Maize</td><td>14 qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer('N. Padma','#43','Maize','14 qtl')">Inspect</button></td></tr>
+          <tr><td colspan="5">Loading arrived procurements...</td></tr>
         </table>
       </div>
 
@@ -267,14 +265,14 @@ tr.row-link:hover{background:var(--pastel-bg);}
 
         <h3 style="font-size:14.5px;margin-bottom:12px;">FAQ (Fair Average Quality) lab entry</h3>
         <div class="field-row">
-          <div class="field"><label>Moisture content (%)</label><input type="number" placeholder="e.g. 16.5"></div>
-          <div class="field"><label>Foreign matter (%)</label><input type="number" placeholder="e.g. 1.2"></div>
+          <div class="field"><label>Moisture content (%)</label><input id="moisture" type="number" placeholder="e.g. 16.5"></div>
+          <div class="field"><label>Foreign matter (%)</label><input id="foreignMatter" type="number" placeholder="e.g. 1.2"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Damaged / broken grains (%)</label><input type="number" placeholder="e.g. 2.0"></div>
+          <div class="field"><label>Damaged / broken grains (%)</label><input id="damaged" type="number" placeholder="e.g. 2.0"></div>
           <div class="field">
             <label>Crop quality grade</label>
-            <select>
+            <select id="grade">
               <option>Grade A — Fair Average Quality</option>
               <option>Grade B</option>
               <option>Below FAQ standard</option>
@@ -306,14 +304,24 @@ tr.row-link:hover{background:var(--pastel-bg);}
 </div>
 
 <script>
+const qualitySession=JSON.parse(localStorage.getItem('sasyaSession')||'null');
+const qualityHeaders={Authorization:'Bearer '+(qualitySession&&qualitySession.token)};
+async function guardQuality(){const response=await fetch('/api/auth/session',{headers:qualityHeaders});const result=await response.json();if(!response.ok||result.session.role!=='quality'){localStorage.removeItem('sasyaSession');window.location.replace('/staff-login.html');}}
+guardQuality();
+document.getElementById('staffLogout').addEventListener('click',async event=>{event.preventDefault();await fetch('/api/auth/logout',{method:'POST',headers:qualityHeaders});localStorage.removeItem('sasyaSession');window.location.replace('index.html');});
+loadQualityQueue();
+async function loadQualityQueue(){try{const response=await fetch('/api/staff/procurements',{headers:qualityHeaders});const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to load quality queue.');const eligible=result.procurements.filter(item=>item.procurement.stage==='arrived');const table=document.getElementById('qualityQueue');table.innerHTML='<tr><th>Farmer ID</th><th>Farmer</th><th>Crop</th><th>Quantity</th><th></th></tr>'+(eligible.length?eligible.map(item=>'<tr><td>'+item.farmer.id+'</td><td>'+item.farmer.name+'</td><td>'+item.procurement.crop+'</td><td>'+item.procurement.expectedQuantity+' qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer(\''+item.farmer.id+'\',\''+item.farmer.name+'\',\''+item.farmer.id+'\',\''+item.procurement.crop+'\',\''+item.procurement.expectedQuantity+' qtl\')">Inspect</button></td></tr>').join(''):'<tr><td colspan="5">No arrived procurements are waiting for quality inspection.</td></tr>');}catch(error){document.getElementById('qualityQueue').innerHTML='<tr><td colspan="5">'+error.message+'</td></tr>';}}
 function showTab(name){
   ['inspect','farmers'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = (t===name) ? 'block' : 'none';
   });
   document.querySelectorAll('.sidebar .nav-item').forEach(el=>el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  const active=document.querySelector('.sidebar .nav-item[onclick*="'+name+'"]');
+  if(active) active.classList.add('active');
 }
-function loadFarmer(name, token, crop, qty){
+let currentProcurementId='F-1048';
+function loadFarmer(id, name, token, crop, qty){
+  currentProcurementId=id;
   document.getElementById('curName').textContent = name;
   document.getElementById('curToken').textContent = token;
   document.getElementById('curCrop').textContent = crop;
@@ -322,18 +330,22 @@ function loadFarmer(name, token, crop, qty){
 }
 function viewProfile(name, token, crop, qty){
   showTabForce('inspect');
-  loadFarmer(name, token, crop, qty);
+  loadFarmer('F-1048', name, token, crop, qty);
 }
 function showTabForce(name){
   ['inspect','farmers'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = (t===name) ? 'block' : 'none';
   });
 }
+let selectedDecision='Accepted';
 function setDecision(decision){
+  selectedDecision=decision;
   document.getElementById('curStatus').textContent = decision;
 }
-function finishCheck(){
-  alert('Quality check recorded for ' + document.getElementById('curName').textContent + '. Farmer moves to weighing.');
+async function finishCheck(){
+  const button=event.currentTarget;button.disabled=true;
+  const payload={decision:selectedDecision,moisture:document.getElementById('moisture').value,foreignMatter:document.getElementById('foreignMatter').value,damaged:document.getElementById('damaged').value,grade:document.getElementById('grade').value};
+  try{const response=await fetch('/api/procurements/'+currentProcurementId+'/quality',{method:'POST',headers:{'Content-Type':'application/json',...qualityHeaders},body:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw new Error(result.error);document.getElementById('curStatus').textContent=selectedDecision;alert('Quality check recorded successfully.');}catch(error){alert(error.message);}finally{button.disabled=false;}
 }
 </script>
 </body>

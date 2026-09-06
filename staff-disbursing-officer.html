@@ -228,9 +228,9 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <a class="nav-item active" onclick="showTab('overview')">💳 Process Payment</a>
     <a class="nav-item" onclick="showTab('payments')">👨‍🌾 Farmer Payments</a>
     <a class="nav-item" onclick="showTab('history')">📋 Payment History</a>
-    <a class="nav-item" onclick="showTab('reports')">📊 Reports</a>
+    <a class="nav-item" href="/disbursing-officer/reports">📊 Reports</a>
     <a class="nav-item" onclick="showTab('pending')">⚠️ Pending / Failed</a>
-    <a class="nav-item" href="staff-login.html" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
+    <a class="nav-item" href="index.html" id="staffLogout" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
   </div>
 
   <div class="dash-main">
@@ -251,11 +251,9 @@ tr.row-link:hover{background:var(--pastel-bg);}
 
       <div class="panel">
         <div class="panel-head"><h3>Ready to process</h3></div>
-        <table>
+        <table id="readyPaymentsTable">
           <tr><th>Farmer ID</th><th>Crop</th><th>Actual quantity</th><th>Rate / qtl</th><th>Amount payable</th><th></th></tr>
-          <tr><td>F-1041</td><td>Paddy</td><td>31.4 qtl</td><td>₹2,203</td><td>₹69,174</td><td><button class="btn btn-primary btn-sm" onclick="processPayment(this)">Process Payment</button></td></tr>
-          <tr><td>F-1042</td><td>Cotton</td><td>9.8 qtl</td><td>₹7,121</td><td>₹69,786</td><td><button class="btn btn-primary btn-sm" onclick="processPayment(this)">Process Payment</button></td></tr>
-          <tr><td>F-1043</td><td>Wheat</td><td>15.6 qtl</td><td>₹2,275</td><td>₹35,490</td><td><button class="btn btn-primary btn-sm" onclick="processPayment(this)">Process Payment</button></td></tr>
+          <tr><td colspan="6" class="data-state">Loading eligible procurements...</td></tr>
         </table>
         <div class="hint" style="margin-top:10px;">Payment amount = actual accepted quantity × procurement rate.</div>
       </div>
@@ -285,25 +283,12 @@ tr.row-link:hover{background:var(--pastel-bg);}
       </div>
     </div>
 
-    <div id="tab-reports" style="display:none;">
-      <div class="dash-header"><div><h1>Reports</h1><div class="sub">Payment summaries for this center</div></div></div>
-      <div class="panel">
-        <table>
-          <tr><th>Report</th><th>Coverage</th><th></th></tr>
-          <tr><td>Daily disbursement report</td><td>6 Sep 2026</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
-          <tr><td>Crop-wise payment summary</td><td>Sep 2026 (month to date)</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
-          <tr><td>Failed transactions report</td><td>Live</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
-        </table>
-      </div>
-    </div>
-
     <div id="tab-pending" style="display:none;">
       <div class="dash-header"><div><h1>Pending &amp; failed payments</h1><div class="sub">Needs action</div></div></div>
       <div class="panel">
-        <table>
+        <table id="pendingPaymentsTable">
           <tr><th>Farmer ID</th><th>Crop</th><th>Amount</th><th>Status</th><th>Reason</th><th></th></tr>
-          <tr><td>F-1040</td><td>Cotton</td><td>₹69,786</td><td><span class="badge badge-progress">Processing</span></td><td>Awaiting bank confirmation</td><td><button class="btn btn-outline btn-sm">Check status</button></td></tr>
-          <tr><td>F-1036</td><td>Wheat</td><td>₹41,405</td><td><span class="badge badge-failed">Failed</span></td><td>Invalid IFSC code</td><td><button class="btn btn-primary btn-sm">Retry Payment</button></td></tr>
+          <tr><td colspan="6" class="data-state">Loading payment records...</td></tr>
         </table>
       </div>
     </div>
@@ -312,18 +297,30 @@ tr.row-link:hover{background:var(--pastel-bg);}
 </div>
 
 <script>
+const paymentSession=JSON.parse(localStorage.getItem('sasyaSession')||'null');
+const paymentHeaders={Authorization:'Bearer '+(paymentSession&&paymentSession.token)};
+async function guardDisbursing(){const response=await fetch('/api/auth/session',{headers:paymentHeaders});const result=await response.json();if(!response.ok||result.session.role!=='disbursing'){localStorage.removeItem('sasyaSession');window.location.replace('/staff-login.html');}}
+guardDisbursing();
+loadReadyPayments();
+document.getElementById('staffLogout').addEventListener('click',async event=>{event.preventDefault();await fetch('/api/auth/logout',{method:'POST',headers:paymentHeaders});localStorage.removeItem('sasyaSession');window.location.replace('index.html');});
 function showTab(name){
-  ['overview','payments','history','reports','pending'].forEach(t=>{
+  ['overview','payments','history','pending'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = (t===name) ? 'block' : 'none';
   });
   document.querySelectorAll('.sidebar .nav-item').forEach(el=>el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  const active=document.querySelector('.sidebar .nav-item[onclick*="'+name+'"]');
+  if(active) active.classList.add('active');
+  if(name==='pending') loadPayments();
 }
-function processPayment(btn){
-  const row = btn.closest('tr');
-  row.children[5].innerHTML = '<span class="badge badge-progress">Processing</span>';
-  btn.textContent = 'Processing…';
-  btn.disabled = true;
+async function paymentRequest(url,options={}){const response=await fetch(url,{...options,headers:{...paymentHeaders,...(options.headers||{})}});const result=await response.json();if(!response.ok)throw new Error(result.error||'Payment request failed.');return result;}
+async function loadReadyPayments(){try{const result=await paymentRequest('/api/staff/procurements');const eligible=result.procurements.filter(item=>item.procurement.stage==='weighing'&&String(item.procurement.quality?.decision||'').toLowerCase()==='accepted'&&item.procurement.quantity?.weight&&!item.payment);const table=document.getElementById('readyPaymentsTable');table.innerHTML='<tr><th>Farmer ID</th><th>Crop</th><th>Actual quantity</th><th>Rate / qtl</th><th>Amount payable</th><th></th></tr>'+(eligible.length?eligible.map(item=>'<tr><td>'+item.farmer.id+'</td><td>'+item.procurement.crop+'</td><td>'+item.procurement.quantity.weight+' qtl</td><td>₹2,203</td><td>₹'+Math.round(item.procurement.quantity.weight*2203)+'</td><td><button class="btn btn-primary btn-sm" onclick="processPayment(this,\''+item.farmer.id+'\')">Process Payment</button> <a class="btn btn-outline btn-sm" href="/disbursing-officer/farmers/'+item.farmer.id+'">Profile</a></td></tr>').join(''):'<tr><td colspan="6" class="data-state">No eligible payments currently.</td></tr>');}catch(error){document.getElementById('readyPaymentsTable').innerHTML='<tr><td colspan="6" class="data-state">'+error.message+'</td></tr>';}}
+async function loadPayments(){try{const result=await paymentRequest('/api/staff/payments');const visible=result.payments.filter(item=>['Pending','Processing','Failed','Retry Required'].includes(item.payment?.status));const table=document.getElementById('pendingPaymentsTable');table.innerHTML='<tr><th>Farmer ID</th><th>Crop</th><th>Amount</th><th>Status</th><th>Reason</th><th></th></tr>'+(visible.length?visible.map(item=>{const status=item.payment.status;const action=['Failed','Retry Required'].includes(status)?'<button class="btn btn-primary btn-sm" onclick="retryPayment(\''+item.farmer.id+'\',this)">Retry Payment</button>':'<button class="btn btn-outline btn-sm" onclick="checkStatus(\''+item.farmer.id+'\',this)">Check status</button>';return '<tr><td><a href="/disbursing-officer/farmers/'+item.farmer.id+'">'+item.farmer.id+'</a></td><td>'+item.procurement.crop+'</td><td>₹'+(item.payment.amount||0)+'</td><td><span class="badge badge-progress">'+status+'</span></td><td>Backend payment status</td><td>'+action+'</td></tr>';}).join(''):'<tr><td colspan="6" class="data-state">No pending or failed payments.</td></tr>');}catch(error){document.getElementById('pendingPaymentsTable').innerHTML='<tr><td colspan="6" class="data-state">'+error.message+'</td></tr>';}}
+async function processPayment(btn,id){
+  btn.disabled=true;btn.textContent='Processing...';
+  try{const result=await paymentRequest('/api/procurements/'+id+'/payment',{method:'POST'});alert('Payment status: '+result.payment.status);}catch(error){alert(error.message);}finally{btn.disabled=false;btn.textContent='Process Payment';}
+}
+async function checkStatus(id,button){button.disabled=true;try{const result=await paymentRequest('/api/payments/'+id+'/status',{method:'POST'});alert('Latest payment status: '+(result.payment?.status||'Unknown'));}catch(error){alert(error.message);}finally{button.disabled=false;}}
+async function retryPayment(id,button){button.disabled=true;button.textContent='Retrying...';try{const result=await paymentRequest('/api/payments/'+id+'/retry',{method:'POST'});alert('Payment retry status: '+result.payment.status);}catch(error){alert(error.message);}finally{button.disabled=false;button.textContent='Retry Payment';}
 }
 </script>
 </body>

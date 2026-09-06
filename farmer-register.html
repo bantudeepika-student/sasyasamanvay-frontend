@@ -240,21 +240,21 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="form-panel active" id="panel1">
       <div class="field">
         <label>Full name</label>
-        <input type="text" placeholder="As per Aadhaar">
+        <input id="fullName" type="text" placeholder="As per Aadhaar">
       </div>
       <div class="field-row">
         <div class="field">
           <label>Mobile number</label>
-          <input type="tel" maxlength="10" placeholder="10-digit mobile number">
+          <input id="mobile" type="tel" maxlength="10" placeholder="10-digit mobile number">
         </div>
         <div class="field">
           <label>Aadhaar number</label>
-          <input type="text" maxlength="12" placeholder="12-digit Aadhaar number">
+          <input id="aadhaar" type="text" maxlength="12" placeholder="12-digit Aadhaar number">
         </div>
       </div>
       <div class="field">
         <label>Address</label>
-        <textarea rows="2" placeholder="Village, Mandal, District, State, PIN"></textarea>
+        <textarea id="address" rows="2" placeholder="Village, Mandal, District, State, PIN"></textarea>
       </div>
       <div class="field">
         <label>Voter ID</label>
@@ -277,17 +277,12 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="form-panel" id="panel2">
       <div class="field">
         <label>Land passbook number</label>
-        <input type="text" placeholder="Land passbook / pattadar number">
+        <input id="landPassbook" type="text" placeholder="Land passbook / pattadar number">
       </div>
       <div class="field">
-        <label>Upload land passbook</label>
-        <input type="file">
-        <div class="hint">PDF or image, up to 5 MB</div>
-      </div>
-      <div class="field">
-        <label>Upload crop certificate</label>
-        <input type="file">
-        <div class="hint">Issued by the local agriculture office</div>
+        <label for="cropCertificateNumber">Crop Certificate Number</label>
+        <input id="cropCertificateNumber" type="text" placeholder="Enter crop certificate number" required>
+        <div class="hint">Enter the number printed on your crop certificate.</div>
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" onclick="goTo(1)">← Back</button>
@@ -299,11 +294,11 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="form-panel" id="panel3">
       <div class="field">
         <label>Bank account number</label>
-        <input type="text" placeholder="Account number">
+        <input id="accountNumber" type="text" placeholder="Account number">
       </div>
       <div class="field">
         <label>IFSC code</label>
-        <input type="text" placeholder="e.g. SBIN0001234">
+        <input id="ifsc" type="text" placeholder="e.g. SBIN0001234">
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" onclick="goTo(2)">← Back</button>
@@ -335,8 +330,31 @@ function goTo(step){
     if(i === step) tab.classList.add('active');
   }
 }
-function createAccount(){
-  goTo(4);
+async function createAccount(){
+  const payload = {
+    name: document.getElementById('fullName').value.trim(),
+    mobile: document.getElementById('mobile').value.trim(),
+    aadhaar: document.getElementById('aadhaar').value.trim(),
+    address: document.getElementById('address').value.trim(),
+    landPassbook: document.getElementById('landPassbook').value.trim(),
+    cropCertificateNumber: document.getElementById('cropCertificateNumber').value.trim(),
+    accountNumber: document.getElementById('accountNumber').value.trim(),
+    ifsc: document.getElementById('ifsc').value.trim()
+  };
+  if(!payload.name || !/^\d{10}$/.test(payload.mobile) || !payload.cropCertificateNumber){
+    alert('Enter your full name, a valid 10-digit mobile number, and crop certificate number.');
+    if(!payload.name || !/^\d{10}$/.test(payload.mobile)) goTo(1);
+    else goTo(2);
+    return;
+  }
+  try{
+    const response = await fetch('/api/farmers', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.error);
+    goTo(4);
+  }catch(error){ alert(error.message || 'Unable to create your account.'); }
 }
 </script>
 </body>

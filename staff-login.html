@@ -266,16 +266,20 @@ function selectRole(el){
   el.classList.add('selected');
   selectedPage = el.getAttribute('data-page');
 }
-function login(){
+async function login(){
   const id = document.getElementById('empId').value.trim();
   const pwd = document.getElementById('pwd').value.trim();
   if(!id || !pwd){ alert('Enter your Employee ID and password.'); return; }
-  localStorage.setItem('sasyaSession', JSON.stringify({
-    type: 'staff',
-    employeeId: id,
-    role: document.querySelector('.role-option.selected').getAttribute('data-role')
-  }));
-  window.location.href = selectedPage;
+  try{
+    const role = document.querySelector('.role-option.selected').getAttribute('data-role');
+    const response = await fetch('/api/auth/staff/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({employeeId:id, password:pwd, role})
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.error);
+    localStorage.setItem('sasyaSession', JSON.stringify({type:'staff', token:result.token, staff:result.staff}));
+    window.location.href = selectedPage;
+  }catch(error){ alert(error.message || 'Unable to log in.'); }
 }
 </script>
 </body>

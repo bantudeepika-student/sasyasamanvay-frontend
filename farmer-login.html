@@ -227,6 +227,7 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="auth-icon">🌾</div>
     <h1>Farmer Login</h1>
     <div class="sub" id="subText">Enter your registered mobile number to continue.</div>
+    <div class="hint" id="otpNotice" aria-live="polite"></div>
 
     <!-- STEP 1: MOBILE -->
     <div id="stepMobile">
@@ -256,22 +257,35 @@ tr.row-link:hover{background:var(--pastel-bg);}
 </div>
 
 <script>
-function sendOtp(){
+async function sendOtp(){
   const mobile = document.getElementById('mobile').value.trim();
   if(mobile.length !== 10){ alert('Enter a valid 10-digit mobile number.'); return; }
-  document.getElementById('mobileEcho').textContent = mobile;
-  document.getElementById('stepMobile').style.display = 'none';
-  document.getElementById('stepOtp').style.display = 'block';
-  document.getElementById('subText').textContent = 'We sent a one-time password to your mobile number.';
+  try{
+    const response = await fetch('/api/auth/farmer/request-otp', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mobile})
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.error);
+    document.getElementById('mobileEcho').textContent = mobile;
+    document.getElementById('stepMobile').style.display = 'none';
+    document.getElementById('stepOtp').style.display = 'block';
+    document.getElementById('subText').textContent = 'We sent a one-time password to your mobile number.';
+    document.getElementById('otpNotice').textContent = 'Development OTP for local testing: ' + result.developmentOtp;
+  }catch(error){ alert(error.message || 'Unable to send OTP.'); }
 }
-function verifyOtp(){
+async function verifyOtp(){
   const otp = document.getElementById('otp').value.trim();
   if(otp.length < 4){ alert('Enter the OTP sent to your mobile.'); return; }
-  localStorage.setItem('sasyaSession', JSON.stringify({
-    type: 'farmer',
-    mobile: document.getElementById('mobile').value.trim()
-  }));
-  window.location.href = 'farmer-dashboard.html';
+  const mobile = document.getElementById('mobile').value.trim();
+  try{
+    const response = await fetch('/api/auth/farmer/verify-otp', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mobile, otp})
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.error);
+    localStorage.setItem('sasyaSession', JSON.stringify({type:'farmer', token:result.token, farmer:result.farmer}));
+    window.location.href = 'farmer-dashboard.html';
+  }catch(error){ alert(error.message || 'Unable to verify OTP.'); }
 }
 </script>
 </body>

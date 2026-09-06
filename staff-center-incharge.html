@@ -227,9 +227,9 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="role-tag">Center In-Charge</div>
     <a class="nav-item active" onclick="showTab('overview')">📊 Overview</a>
     <a class="nav-item" onclick="showTab('farmers')">🌾 Farmer Profiles</a>
-    <a class="nav-item" onclick="showTab('reports')">📄 Reports</a>
-    <a class="nav-item" onclick="showTab('register')">➕ Register Farmer</a>
-    <a class="nav-item" href="staff-login.html" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
+    <a class="nav-item" href="/center-incharge/reports">📄 Reports</a>
+    <a class="nav-item" href="/farmer-register.html">➕ Register Farmer</a>
+    <a class="nav-item" href="index.html" id="staffLogout" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
   </div>
 
   <div class="dash-main">
@@ -240,7 +240,7 @@ tr.row-link:hover{background:var(--pastel-bg);}
           <h1>Center overview</h1>
           <div class="sub">Guntur District Procurement Center · Today, 6 Sep 2026</div>
         </div>
-        <button class="btn btn-primary" onclick="showTab('register')">➕ Register a Farmer</button>
+        <a class="btn btn-primary" href="/farmer-register.html">➕ Register a Farmer</a>
       </div>
 
       <div class="kpi-grid">
@@ -280,23 +280,9 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div id="tab-farmers" style="display:none;">
       <div class="dash-header"><div><h1>Farmer profiles</h1><div class="sub">All farmers registered or scheduled at this center</div></div></div>
       <div class="panel">
-        <table>
+        <table id="centerFarmerTable">
           <tr><th>Token</th><th>Name</th><th>Mobile</th><th>Crop</th><th>Quantity</th><th>Documents</th></tr>
-          <tr><td>#41</td><td>K. Ramaiah</td><td>98xxxxxx12</td><td>Paddy</td><td>28 qtl</td><td><span class="badge badge-done">Verified</span></td></tr>
-          <tr><td>#40</td><td>S. Lakshmi</td><td>98xxxxxx45</td><td>Wheat</td><td>15 qtl</td><td><span class="badge badge-done">Verified</span></td></tr>
-          <tr><td>#37</td><td>D. Prasad</td><td>98xxxxxx09</td><td>Maize</td><td>22 qtl</td><td><span class="badge badge-waiting">Pending review</span></td></tr>
-        </table>
-      </div>
-    </div>
-
-    <div id="tab-reports" style="display:none;">
-      <div class="dash-header"><div><h1>Reports</h1><div class="sub">Download or view procurement records</div></div></div>
-      <div class="panel">
-        <table>
-          <tr><th>Report</th><th>Coverage</th><th></th></tr>
-          <tr><td>Daily procurement report</td><td>6 Sep 2026</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
-          <tr><td>Crop-wise procurement report</td><td>Sep 2026 (month to date)</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
-          <tr><td>Pending farmers report</td><td>Live</td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+          <tr><td colspan="6">Loading assigned farmers...</td></tr>
         </table>
       </div>
     </div>
@@ -323,12 +309,25 @@ tr.row-link:hover{background:var(--pastel-bg);}
 </div>
 
 <script>
+const centerSession=JSON.parse(localStorage.getItem('sasyaSession')||'null');
+const centerHeaders={Authorization:'Bearer '+(centerSession&&centerSession.token)};
+async function guardCenter(){const response=await fetch('/api/auth/session',{headers:centerHeaders});const result=await response.json();if(!response.ok||result.session.role!=='incharge'){localStorage.removeItem('sasyaSession');window.location.replace('/staff-login.html');}}
+guardCenter();
+document.getElementById('staffLogout').addEventListener('click',async event=>{event.preventDefault();await fetch('/api/auth/logout',{method:'POST',headers:centerHeaders});localStorage.removeItem('sasyaSession');window.location.replace('index.html');});
+loadCenterFarmers();
+async function loadCenterFarmers(){try{const result=await staffRequest('/api/staff/procurements');const table=document.getElementById('centerFarmerTable');table.innerHTML='<tr><th>Farmer ID</th><th>Name</th><th>Mobile</th><th>Crop</th><th>Quantity</th><th>Status</th></tr>'+(result.procurements.length?result.procurements.map(item=>{const canArrive=item.procurement.stage==='slot-assigned';const action=canArrive?'<button class="btn btn-outline btn-sm" onclick="markArrived(\''+item.farmer.id+'\',this)">Arrived</button>':item.procurement.stage==='arrived'?'<span class="badge badge-done">Arrived</span>':'<span class="badge badge-progress">'+item.procurement.stage+'</span>';return '<tr><td>'+item.farmer.id+'</td><td><a href="/center-incharge/farmers/'+item.farmer.id+'">'+item.farmer.name+'</a></td><td>'+item.farmer.mobile+'</td><td>'+item.procurement.crop+'</td><td>'+item.procurement.expectedQuantity+' qtl</td><td>'+action+'</td></tr>';}).join(''):'<tr><td colspan="6">No farmers assigned to this center.</td></tr>');}catch(error){document.getElementById('centerFarmerTable').innerHTML='<tr><td colspan="6">'+error.message+'</td></tr>';}}
 function showTab(name){
-  ['overview','farmers','reports','register'].forEach(t=>{
+  ['overview','farmers','register'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = (t===name) ? 'block' : 'none';
   });
   document.querySelectorAll('.sidebar .nav-item').forEach(el=>el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  const active=document.querySelector('.sidebar .nav-item[onclick*="'+name+'"]');
+  if(active) active.classList.add('active');
+}
+async function staffRequest(url,options={}){const response=await fetch(url,{...options,headers:{...centerHeaders,...(options.headers||{})}});const result=await response.json();if(!response.ok)throw new Error(result.error||'Request failed.');return result;}
+async function markArrived(id,button){
+  button.disabled=true;button.textContent='Updating...';
+  try{await staffRequest('/api/procurements/'+id+'/arrive',{method:'POST'});button.textContent='Arrived';button.classList.add('btn-primary');alert('Farmer arrival recorded successfully.');}catch(error){button.disabled=false;button.textContent='Arrived';alert(error.message);}
 }
 </script>
 </body>

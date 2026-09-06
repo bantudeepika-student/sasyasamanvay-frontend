@@ -226,7 +226,7 @@ tr.row-link:hover{background:var(--pastel-bg);}
   <div class="sidebar">
     <div class="role-tag">Quantity Inspector</div>
     <a class="nav-item active">⚖️ Weighing</a>
-    <a class="nav-item" href="staff-login.html" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
+    <a class="nav-item" href="index.html" id="staffLogout" style="margin-top:20px;color:var(--text-secondary);">↩ Logout</a>
   </div>
 
   <div class="dash-main">
@@ -243,11 +243,9 @@ tr.row-link:hover{background:var(--pastel-bg);}
 
     <div class="panel">
       <div class="panel-head"><h3>Farmers waiting for weighing</h3></div>
-      <table>
+      <table id="weighingQueue">
         <tr><th>Token</th><th>Farmer</th><th>Crop</th><th>Expected qty</th><th></th></tr>
-        <tr><td>#41</td><td>K. Ramaiah</td><td>Paddy</td><td>28 qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer('K. Ramaiah','#41','Paddy','28')">Weigh</button></td></tr>
-        <tr><td>#44</td><td>T. Ravi</td><td>Wheat</td><td>16 qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer('T. Ravi','#44','Wheat','16')">Weigh</button></td></tr>
-        <tr><td>#45</td><td>G. Sita</td><td>Maize</td><td>20 qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer('G. Sita','#45','Maize','20')">Weigh</button></td></tr>
+        <tr><td colspan="5">Loading accepted procurements...</td></tr>
       </table>
     </div>
 
@@ -281,20 +279,27 @@ tr.row-link:hover{background:var(--pastel-bg);}
 </div>
 
 <script>
-function loadFarmer(name, token, crop, expected){
+const quantitySession=JSON.parse(localStorage.getItem('sasyaSession')||'null');
+const quantityHeaders={Authorization:'Bearer '+(quantitySession&&quantitySession.token)};
+async function guardQuantity(){const response=await fetch('/api/auth/session',{headers:quantityHeaders});const result=await response.json();if(!response.ok||result.session.role!=='quantity'){localStorage.removeItem('sasyaSession');window.location.replace('/staff-login.html');}}
+guardQuantity();
+document.getElementById('staffLogout').addEventListener('click',async event=>{event.preventDefault();await fetch('/api/auth/logout',{method:'POST',headers:quantityHeaders});localStorage.removeItem('sasyaSession');window.location.replace('index.html');});
+loadWeighingQueue();
+async function loadWeighingQueue(){try{const response=await fetch('/api/staff/procurements',{headers:quantityHeaders});const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to load weighing queue.');const eligible=result.procurements.filter(item=>item.procurement.stage==='quality-inspection'&&String(item.procurement.quality?.decision||'').toLowerCase()==='accepted'&&!item.procurement.quantity);const table=document.getElementById('weighingQueue');table.innerHTML='<tr><th>Farmer ID</th><th>Farmer</th><th>Crop</th><th>Expected qty</th><th></th></tr>'+(eligible.length?eligible.map(item=>'<tr><td>'+item.farmer.id+'</td><td>'+item.farmer.name+'</td><td>'+item.procurement.crop+'</td><td>'+item.procurement.expectedQuantity+' qtl</td><td><button class="btn btn-outline btn-sm" onclick="loadFarmer(\''+item.farmer.id+'\',\''+item.farmer.name+'\',\''+item.farmer.id+'\',\''+item.procurement.crop+'\',\''+item.procurement.expectedQuantity+'\')">Weigh</button></td></tr>').join(''):'<tr><td colspan="5">No accepted procurements are waiting for weighing.</td></tr>';}catch(error){document.getElementById('weighingQueue').innerHTML='<tr><td colspan="5">'+error.message+'</td></tr>';}}
+let currentProcurementId='F-1048';
+function loadFarmer(id, name, token, crop, expected){
+  currentProcurementId=id;
   document.getElementById('curName').textContent = name;
   document.getElementById('curToken').textContent = token;
   document.getElementById('curCrop').textContent = crop;
   document.getElementById('curExpected').textContent = expected + ' qtl';
   document.getElementById('actualWeight').value = '';
 }
-function submitWeight(){
+async function submitWeight(){
   const w = document.getElementById('actualWeight').value;
-  if(!w){ alert('Enter the actual weight before submitting.'); return; }
-  const table = document.getElementById('completedTable');
-  const row = table.insertRow(1);
-  row.innerHTML = `<td>${document.getElementById('curToken').textContent}</td><td>${document.getElementById('curName').textContent}</td><td>${document.getElementById('curCrop').textContent}</td><td>${document.getElementById('curExpected').textContent}</td><td>${w} qtl</td>`;
-  alert('Actual weight of ' + w + ' qtl recorded for ' + document.getElementById('curName').textContent + '.');
+  if(!w || Number(w)<=0){ alert('Enter a valid positive weight before submitting.'); return; }
+  const button=event.currentTarget;button.disabled=true;button.textContent='Saving...';
+  try{const response=await fetch('/api/procurements/'+currentProcurementId+'/weigh',{method:'POST',headers:{'Content-Type':'application/json',...quantityHeaders},body:JSON.stringify({weight:Number(w)})});const result=await response.json();if(!response.ok)throw new Error(result.error);const table=document.getElementById('completedTable');const row=table.insertRow(1);row.innerHTML='<td>'+document.getElementById('curToken').textContent+'</td><td>'+document.getElementById('curName').textContent+'</td><td>'+document.getElementById('curCrop').textContent+'</td><td>'+document.getElementById('curExpected').textContent+'</td><td>'+w+' qtl</td>';alert('Actual weight recorded successfully.');}catch(error){alert(error.message);}finally{button.disabled=false;button.textContent='Submit Quantity';}
 }
 </script>
 </body>
