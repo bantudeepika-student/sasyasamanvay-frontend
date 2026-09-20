@@ -395,30 +395,6 @@
   </div>
 </section>
 
-<!-- ---------- LOGIN ---------- -->
-<section class="section" id="login">
-  <div class="wrap">
-    <div class="section-head">
-      <h2 data-i18n="login_heading">Continue to your dashboard</h2>
-      <p data-i18n="login_sub">Farmers and department staff sign in through separate, role-specific portals.</p>
-    </div>
-    <div class="login-grid">
-      <div class="login-card">
-        <div class="li-icon">🌾</div>
-        <h3 data-i18n="farmer_login_h">Farmer Login</h3>
-        <p data-i18n="farmer_login_p">Book a procurement slot, track your token and follow your crop from arrival to payment.</p>
-        <a href="farmer-login.html" class="btn btn-primary" data-i18n="farmer_login_btn">Login with Mobile &amp; OTP</a>
-      </div>
-      <div class="login-card">
-        <div class="li-icon">🏢</div>
-        <h3 data-i18n="staff_login_h">Staff Login</h3>
-        <p data-i18n="staff_login_p">For Center In-Charge, Quality Inspector, Quantity Inspector and Disbursing Officer.</p>
-        <a href="staff-login.html" class="btn btn-outline" data-i18n="staff_login_btn">Login with Employee ID</a>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ---------- FEATURES ---------- -->
 <section class="section" style="background:var(--pastel-bg);">
   <div class="wrap">
@@ -615,8 +591,11 @@ function applyLang(lang){
     if(dict[key]) el.textContent = dict[key];
   });
   document.documentElement.setAttribute('data-lang', lang);
+  langSelect.value = lang;
+  localStorage.setItem('sasyaLanguage', lang);
 }
 langSelect.addEventListener('change', e => applyLang(e.target.value));
+applyLang(localStorage.getItem('sasyaLanguage') || 'en');
 </script>
 </body>
 </html>

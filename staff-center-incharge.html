@@ -219,7 +219,6 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="brand-mark">🌾</div>
     <div class="brand-name">SasyaSamanvay</div>
   </a>
-  <a href="staff-login.html" class="back">Switch account →</a>
 </div>
 
 <div class="dash-shell">
@@ -330,5 +329,6 @@ async function markArrived(id,button){
   try{await staffRequest('/api/procurements/'+id+'/arrive',{method:'POST'});button.textContent='Arrived';button.classList.add('btn-primary');alert('Farmer arrival recorded successfully.');}catch(error){button.disabled=false;button.textContent='Arrived';alert(error.message);}
 }
 </script>
+<script src="i18n.js"></script>
 </body>
 </html>

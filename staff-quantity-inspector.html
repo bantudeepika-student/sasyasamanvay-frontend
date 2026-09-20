@@ -216,7 +216,6 @@ tr.row-link:hover{background:var(--pastel-bg);}
     <div class="brand-mark">🌾</div>
     <div class="brand-name">SasyaSamanvay</div>
   </a>
-  <a href="staff-login.html" class="back">Switch account →</a>
 </div>
 
 <div class="dash-shell">
@@ -230,7 +229,7 @@ tr.row-link:hover{background:var(--pastel-bg);}
   <div class="dash-main">
     <div id="tab-farmers" style="display:none;">
       <div class="dash-header"><div><h1>Farmer profiles</h1><div class="sub">Farmers assigned to this procurement center</div></div></div>
-      <div class="panel"><table id="quantityFarmerTable"><tr><th>Farmer ID</th><th>Name</th><th>Crop</th><th>Status</th></tr><tr><td colspan="4">Loading farmer profiles...</td></tr></table></div>
+      <div class="panel"><table id="quantityFarmerTable"><tr><th>Name</th><th>Farmer ID</th><th>Crop</th></tr><tr><td colspan="3">Loading farmer profiles...</td></tr></table></div>
     </div>
     <div id="tab-weighing">
     <div class="dash-header">
@@ -315,7 +314,8 @@ let currentProcurementId='F-1048';
 function loadFarmer(id,name,token,crop,expected){currentProcurementId=id;document.getElementById('curName').textContent=name;document.getElementById('curToken').textContent=token;document.getElementById('curCrop').textContent=crop;document.getElementById('curExpected').textContent=expected+' qtl';document.getElementById('actualWeight').value='';}
 async function loadWeighingQueue(){try{const response=await fetch('/api/staff/procurements',{headers:quantityHeaders});const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to load weighing queue.');const eligible=result.procurements.filter(item=>item.procurement.stage==='quality-inspection'&&String(item.procurement.quality?.decision||'').toLowerCase()==='accepted'&&!item.procurement.quantity);const table=document.getElementById('weighingQueue');table.innerHTML='<tr><th>Farmer ID</th><th>Farmer</th><th>Crop</th><th>Expected qty</th><th></th></tr>';if(!eligible.length){table.insertAdjacentHTML('beforeend','<tr><td colspan="5">No accepted procurements are waiting for weighing.</td></tr>');return;}eligible.forEach(item=>{const row=table.insertRow(-1);row.innerHTML='<td>'+item.farmer.id+'</td><td>'+item.farmer.name+'</td><td>'+item.procurement.crop+'</td><td>'+item.procurement.expectedQuantity+' qtl</td><td><button class="btn btn-outline btn-sm" type="button">Weigh</button></td>';row.querySelector('button').addEventListener('click',()=>loadFarmer(item.farmer.id,item.farmer.name,item.farmer.id,item.procurement.crop,item.procurement.expectedQuantity));});}catch(error){document.getElementById('weighingQueue').innerHTML='<tr><td colspan="5">'+error.message+'</td></tr>';}}
 async function submitWeight(){const w=document.getElementById('actualWeight').value;if(!w||Number(w)<=0){alert('Enter a valid positive weight before submitting.');return;}const button=document.getElementById('submitWeightBtn');button.disabled=true;button.textContent='Saving...';try{const response=await fetch('/api/procurements/'+currentProcurementId+'/weigh',{method:'POST',headers:{'Content-Type':'application/json',...quantityHeaders},body:JSON.stringify({weight:Number(w)})});const result=await response.json();if(!response.ok)throw new Error(result.error);alert('Quantity submitted successfully');loadWeighingQueue();}catch(error){alert(error.message);}finally{button.disabled=false;button.textContent='Submit Quantity';}}
-async function loadQuantityFarmers(){try{const response=await fetch('/api/staff/procurements',{headers:quantityHeaders});const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to load farmer profiles.');const table=document.getElementById('quantityFarmerTable');table.innerHTML='<tr><th>Farmer ID</th><th>Name</th><th>Crop</th><th>Status</th></tr>'+(result.procurements.length?result.procurements.map(item=>'<tr><td><a href="/quantity-inspector/farmers/'+item.farmer.id+'">'+item.farmer.id+'</a></td><td><a href="/quantity-inspector/farmers/'+item.farmer.id+'">'+item.farmer.name+'</a></td><td>'+item.procurement.crop+'</td><td>'+item.procurement.stage+'</td></tr>').join(''):'<tr><td colspan="4">No farmers assigned to this center.</td></tr>');}catch(error){document.getElementById('quantityFarmerTable').innerHTML='<tr><td colspan="4">'+error.message+'</td></tr>';}}
+async function loadQuantityFarmers(){try{const response=await fetch('/api/staff/procurements',{headers:quantityHeaders});const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to load farmer profiles.');const table=document.getElementById('quantityFarmerTable');table.innerHTML='<tr><th>Name</th><th>Farmer ID</th><th>Crop</th></tr>'+(result.procurements.length?result.procurements.map(item=>'<tr class="row-link" onclick="window.location.href=\'/quantity-inspector/farmers/'+item.farmer.id+'\'"><td>'+item.farmer.name+'</td><td>'+item.farmer.id+'</td><td>'+item.procurement.crop+'</td></tr>').join(''):'<tr><td colspan="3">No farmers assigned to this center.</td></tr>');}catch(error){document.getElementById('quantityFarmerTable').innerHTML='<tr><td colspan="3">'+error.message+'</td></tr>';}}
 </script>
+<script src="i18n.js"></script>
 </body>
 </html>
